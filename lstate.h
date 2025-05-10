@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.h,v 2.81 2012/06/08 15:14:04 roberto Exp roberto $
+** $Id: lstate.h,v 2.82 2012/07/02 13:37:04 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -173,6 +173,10 @@ struct lua_State {
   struct lua_longjmp *errorJmp;  /* current error recover point */
   ptrdiff_t errfunc;  /* current error handling function (stack index) */
   CallInfo base_ci;  /* CallInfo for first level (C calling Lua) */
+
+  /* Opcounters for MusicMud */
+  unsigned int opcount;
+  unsigned int maxopcount;
 };
 
 

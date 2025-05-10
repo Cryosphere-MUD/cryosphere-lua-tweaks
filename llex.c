@@ -1,5 +1,5 @@
 /*
-** $Id: llex.c,v 2.62 2012/12/05 19:57:00 roberto Exp roberto $
+** $Id: llex.c,v 2.63 2013/03/16 21:10:18 roberto Exp $
 ** Lexical Analyzer
 ** See Copyright Notice in lua.h
 */
@@ -38,7 +38,11 @@ static const char *const luaX_tokens [] = {
     "end", "false", "for", "function", "goto", "if",
     "in", "local", "nil", "not", "or", "repeat",
     "return", "then", "true", "until", "while",
-    "..", "...", "==", ">=", "<=", "~=", "::", "<eof>",
+    "..", "...", "==", ">=", "<=", "~=",
+#if defined(LUA_BITWISE_OPERATORS)
+    ">>", "<<", "^^", "!=",
+#endif
+    "::", "<eof>",
     "<number>", "<name>", "<string>"
 };
 
@@ -440,6 +444,30 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         if (ls->current != '=') return '=';
         else { next(ls); return TK_EQ; }
       }
+#if defined(LUA_BITWISE_OPERATORS)
+      case '<': {
+        next(ls);
+        if (ls->current == '=') { next(ls); return TK_LE; }
+        else if (ls->current == '<') { next(ls); return TK_LSHFT; }
+        else  return '<';
+      }
+      case '>': {
+        next(ls);
+        if (ls->current == '=') { next(ls); return TK_GE; }
+        else if (ls->current == '>') { next(ls); return TK_RSHFT; }
+        else return '>';
+      }
+      case '^': {
+        next(ls);
+        if (ls->current != '^') return '^';
+        else { next(ls); return TK_XOR; }
+      }
+      case '!': {
+        next(ls);
+        if (ls->current != '=') return TK_NOT; /* musicmud change to use ! as unary logical negation operator */
+        else { next(ls); return TK_NE; }
+      }
+#else
       case '<': {
         next(ls);
         if (ls->current != '=') return '<';
@@ -450,6 +478,7 @@ static int llex (LexState *ls, SemInfo *seminfo) {
         if (ls->current != '=') return '>';
         else { next(ls); return TK_GE; }
       }
+#endif
       case '~': {
         next(ls);
         if (ls->current != '=') return '~';

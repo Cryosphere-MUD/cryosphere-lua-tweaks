@@ -1,5 +1,5 @@
 /*
-** $Id: lvm.c,v 2.154 2012/08/16 17:34:28 roberto Exp roberto $
+** $Id: lvm.c,v 2.155 2013/03/16 21:10:18 roberto Exp $
 ** Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -140,22 +140,39 @@ void luaV_settable (lua_State *L, const TValue *t, TValue *key, StkId val) {
     if (ttistable(t)) {  /* `t' is a table? */
       Table *h = hvalue(t);
       TValue *oldval = cast(TValue *, luaH_get(h, key));
+
+      // __usedindex magic
+      if (!ttisnil(oldval))
+      {
+        if ((tm = fasttm(L, h->metatable, TM_USEDINDEX)) == NULL) /* and no TM? */{
+          setobj2t(L, oldval, val);  /* write barrier */
+          invalidateTMcache(h);
+          luaC_barrierback(L, obj2gco(h), val);
+          return;
+        } else {
+         /* else will try the tag method */
+       }
+      }
+      else /* old is nil? */
+      {
       /* if previous value is not nil, there must be a previous entry
          in the table; moreover, a metamethod has no relevance */
-      if (!ttisnil(oldval) ||
-         /* previous value is nil; must check the metamethod */
-         ((tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL &&
-         /* no metamethod; is there a previous entry in the table? */
-         (oldval != luaO_nilobject ||
-         /* no previous entry; must create one. (The next test is
-            always true; we only need the assignment.) */
-         (oldval = luaH_newkey(L, h, key), 1)))) {
-        /* no metamethod and (now) there is an entry with given key */
-        setobj2t(L, oldval, val);  /* assign new value to that entry */
-        invalidateTMcache(h);
-        luaC_barrierback(L, obj2gco(h), val);
-        return;
+      if (
+           /* previous value is nil; must check the metamethod */
+           ((tm = fasttm(L, h->metatable, TM_NEWINDEX)) == NULL &&
+           /* no metamethod; is there a previous entry in the table? */
+           (oldval != luaO_nilobject ||
+           /* no previous entry; must create one. (The next test is
+              always true; we only need the assignment.) */
+           (oldval = luaH_newkey(L, h, key), 1)))) {
+          /* no metamethod and (now) there is an entry with given key */
+          setobj2t(L, oldval, val);  /* assign new value to that entry */
+          invalidateTMcache(h);
+          luaC_barrierback(L, obj2gco(h), val);
+          return;
+        }
       }
+
       /* else will try the metamethod */
     }
     else  /* not a table; check metamethod */
@@ -475,7 +492,30 @@ void luaV_finishOp (lua_State *L) {
   }
 }
 
-
+#if defined(LUA_BITWISE_OPERATORS)
+static void Logic (lua_State *L, StkId ra, const TValue *rb,
+                   const TValue *rc, TMS op) {
+  TValue tempb, tempc;
+  const TValue *b, *c;
+  if ((b = luaV_tonumber(rb, &tempb)) != NULL &&
+      (c = luaV_tonumber(rc, &tempc)) != NULL) {
+    lua_Number nb = nvalue(b), nc = nvalue(c);
+    lua_Integer r;
+    switch (op) {
+      case TM_BLSHFT: luai_loglshft(L, r, nb, nc); break;
+      case TM_BRSHFT: luai_logrshft(L, r, nb, nc); break;
+      case TM_BOR: luai_logor(L, r, nb, nc); break;
+      case TM_BAND: luai_logand(L, r, nb, nc); break;
+      case TM_BXOR: luai_logxor(L, r, nb, nc); break;
+      case TM_BNOT: luai_lognot(L, r, nb); break;
+      default: lua_assert(0); r = 0; break;
+    }
+    setnvalue(ra, r);
+  }
+  else if (!call_binTM(L, rb, rc, ra, op))
+    luaG_logicerror(L, rb, rc);
+}
+#endif
 
 /*
 ** some macros for common tasks in `luaV_execute'
@@ -516,6 +556,22 @@ void luaV_finishOp (lua_State *L) {
                           L->top = ci->top;})  /* restore top */ \
            luai_threadyield(L); )
 
+#if defined(LUA_BITWISE_OPERATORS)
+#define logic_op(op,tm) { \
+        TValue *rb = RKB(i); \
+        TValue *rc = RKC(i); \
+        if (ttisnumber(rb) && ttisnumber(rc)) { \
+          lua_Integer r; \
+          lua_Number nb = nvalue(rb), nc = nvalue(rc); \
+          op(L, r, nb, nc); \
+          setnvalue(ra, r); \
+        } \
+        else \
+          Protect(Logic(L, ra, rb, rc, tm)); \
+      }
+#endif
+
+
 
 #define arith_op(op,tm) { \
         TValue *rb = RKB(i); \
@@ -549,6 +605,14 @@ void luaV_execute (lua_State *L) {
         (--L->hookcount == 0 || L->hookmask & LUA_MASKLINE)) {
       Protect(traceexec(L));
     }
+
+    /* Opcounters for MusicMud */
+    if(L->maxopcount && L->opcount > L->maxopcount) {
+      luaG_runerror(L, "Opcount limit exceeded");
+      return;
+    }
+    L->opcount++;
+
     /* WARNING: several calls may realloc the stack and invalidate `ra' */
     ra = RA(i);
     lua_assert(base == ci->u.l.base);
@@ -642,6 +706,39 @@ void luaV_execute (lua_State *L) {
           Protect(luaV_arith(L, ra, rb, rb, TM_UNM));
         }
       )
+#if defined(LUA_BITWISE_OPERATORS)
+      vmcase(OP_BOR,
+        logic_op(luai_logor, TM_BOR);
+      )
+      vmcase(OP_BAND,
+        logic_op(luai_logand, TM_BAND);
+      )
+      vmcase(OP_BXOR,
+        logic_op(luai_logxor, TM_BXOR);
+      )
+      vmcase(OP_BLSHFT,
+        logic_op(luai_loglshft, TM_BLSHFT);
+      )
+      vmcase(OP_BRSHFT,
+        logic_op(luai_logrshft, TM_BRSHFT);
+      )
+      vmcase(OP_BNOT,
+        TValue *rb = RB(i);
+        if (ttisnumber(rb)) {
+          lua_Integer r;
+          lua_Number nb = nvalue(rb);
+          luai_lognot(L, r, nb);
+          setnvalue(ra, r);
+        }
+        else {
+          Protect(Logic(L, ra, rb, rb, TM_BNOT));
+        }
+        continue;
+      )
+      vmcase(OP_INTDIV,
+        arith_op(luai_numintdiv, TM_DIV);
+      )
+#endif
       vmcase(OP_NOT,
         TValue *rb = RB(i);
         int res = l_isfalse(rb);  /* next assignment may change this value */

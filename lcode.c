@@ -1,5 +1,5 @@
 /*
-** $Id: lcode.c,v 2.61 2012/08/14 18:12:34 roberto Exp roberto $
+** $Id: lcode.c,v 2.62 2012/08/16 17:34:28 roberto Exp $
 ** Code generator for Lua
 ** See Copyright Notice in lua.h
 */
@@ -726,7 +726,11 @@ static void codearith (FuncState *fs, OpCode op,
   if (constfolding(op, e1, e2))
     return;
   else {
+#if defined(LUA_BITWISE_OPERATORS)
+    int o2 = (op != OP_UNM && op != OP_LEN && op != OP_BNOT) ? luaK_exp2RK(fs, e2) : 0;
+#else
     int o2 = (op != OP_UNM && op != OP_LEN) ? luaK_exp2RK(fs, e2) : 0;
+#endif
     int o1 = luaK_exp2RK(fs, e1);
     if (o1 > o2) {
       freeexp(fs, e1);
@@ -763,6 +767,14 @@ void luaK_prefix (FuncState *fs, UnOpr op, expdesc *e, int line) {
   expdesc e2;
   e2.t = e2.f = NO_JUMP; e2.k = VKNUM; e2.u.nval = 0;
   switch (op) {
+#if defined(LUA_BITWISE_OPERATORS)
+    case OPR_BNOT: {
+      if (e->k == VK)
+        luaK_exp2anyreg(fs, e);  /* cannot operate on non-numeric constants */
+      codearith(fs, OP_BNOT, e, &e2, line);
+      break;
+    }
+#endif
     case OPR_MINUS: {
       if (isnumeral(e))  /* minus constant? */
         e->u.nval = luai_numunm(NULL, e->u.nval);  /* fold it */
@@ -846,6 +858,14 @@ void luaK_posfix (FuncState *fs, BinOpr op,
       codearith(fs, cast(OpCode, op - OPR_ADD + OP_ADD), e1, e2, line);
       break;
     }
+#if defined(LUA_BITWISE_OPERATORS)
+    case OPR_BOR: codearith(fs, OP_BOR, e1, e2, line); break;
+    case OPR_BAND: codearith(fs, OP_BAND, e1, e2, line); break;
+    case OPR_BXOR: codearith(fs, OP_BXOR, e1, e2, line); break;
+    case OPR_BLSHFT: codearith(fs, OP_BLSHFT, e1, e2, line); break;
+    case OPR_BRSHFT: codearith(fs, OP_BRSHFT, e1, e2, line); break;
+    case OPR_INTDIV: codearith(fs, OP_INTDIV, e1, e2, line); break;
+#endif
     case OPR_EQ: case OPR_LT: case OPR_LE: {
       codecomp(fs, cast(OpCode, op - OPR_EQ + OP_EQ), 1, e1, e2);
       break;

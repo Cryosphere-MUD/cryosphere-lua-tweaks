@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.h,v 2.10 2010/04/13 20:48:12 roberto Exp roberto $
+** $Id: ltm.h,v 2.11 2011/02/28 17:32:10 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -18,6 +18,7 @@
 typedef enum {
   TM_INDEX,
   TM_NEWINDEX,
+  TM_USEDINDEX,
   TM_GC,
   TM_MODE,
   TM_LEN,
@@ -33,6 +34,15 @@ typedef enum {
   TM_LE,
   TM_CONCAT,
   TM_CALL,
+#if defined(LUA_BITWISE_OPERATORS)
+  TM_BOR,
+  TM_BAND,
+  TM_BXOR,
+  TM_BLSHFT,
+  TM_BRSHFT,
+  TM_BNOT,
+  TM_INTDIV,
+#endif
   TM_N		/* number of elements in the enum */
 } TMS;
 

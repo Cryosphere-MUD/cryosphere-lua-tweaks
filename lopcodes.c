@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.c,v 1.48 2011/04/19 16:22:13 roberto Exp roberto $
+** $Id: lopcodes.c,v 1.49 2012/05/14 13:34:18 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -34,6 +34,15 @@ LUAI_DDEF const char *const luaP_opnames[NUM_OPCODES+1] = {
   "DIV",
   "MOD",
   "POW",
+#if defined(LUA_BITWISE_OPERATORS)
+  "BOR",
+  "BAND",
+  "OP_BXOR",
+  "BLSHFT",
+  "BRSHFT",
+  "BNOT",
+  "INTDIV",
+#endif
   "UNM",
   "NOT",
   "LEN",
@@ -82,6 +91,15 @@ LUAI_DDEF const lu_byte luaP_opmodes[NUM_OPCODES] = {
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_DIV */
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_MOD */
  ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_POW */
+#if defined(LUA_BITWISE_OPERATORS)
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BOR */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BAND */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BXOR */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BLSHFT */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_BRSHFT */
+ ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_BNOT */
+ ,opmode(0, 1, OpArgK, OpArgK, iABC)		/* OP_INTDIV */
+#endif
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_UNM */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_NOT */
  ,opmode(0, 1, OpArgR, OpArgN, iABC)		/* OP_LEN */

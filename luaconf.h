@@ -1,5 +1,5 @@
 /*
-** $Id: luaconf.h,v 1.175 2013/01/29 16:00:40 roberto Exp roberto $
+** $Id: luaconf.h,v 1.176 2013/03/16 21:10:18 roberto Exp $
 ** Configuration file for Lua
 ** See Copyright Notice in lua.h
 */
@@ -150,7 +150,11 @@
 
 #else				/* }{ */
 
+#ifdef __cplusplus
+#define LUA_API		extern "C"
+#else
 #define LUA_API		extern
+#endif
 
 #endif				/* } */
 
@@ -202,6 +206,13 @@
 ** CHANGE it if you want a different size.
 */
 #define LUA_IDSIZE	60
+
+
+/*
+@@ LUA_BITWISE_OPERATORS enable logical operators | & ^| >> << ~ on lua_Number
+@* but also arithmetic operator \ (integer division) and != as an alernative to ~=
+*/
+#define LUA_BITWISE_OPERATORS
 
 
 /*
@@ -448,6 +459,19 @@
 #define luai_numlt(L,a,b)	((a)<(b))
 #define luai_numle(L,a,b)	((a)<=(b))
 #define luai_numisnan(L,a)	(!luai_numeq((a), (a)))
+#endif
+
+#ifdef LUA_BITWISE_OPERATORS
+#define luai_numintdiv(L, a,b)     (floor((a)/(b)))
+#endif
+
+#if defined(LUA_BITWISE_OPERATORS)
+#define luai_logor(L, r, a, b)     { lua_Integer ai,bi; lua_number2int(ai,a); lua_number2int(bi,b); r = ai|bi; }
+#define luai_logand(L, r, a,b)     { lua_Integer ai,bi; lua_number2int(ai,a); lua_number2int(bi,b); r = ai&bi; }
+#define luai_logxor(L, r, a,b)     { lua_Integer ai,bi; lua_number2int(ai,a); lua_number2int(bi,b); r = ai^bi; }
+#define luai_lognot(L, r,a)        { lua_Integer ai; lua_number2int(ai,a); r = ~ai; }
+#define luai_loglshft(L, r, a,b)   { lua_Integer ai,bi; lua_number2int(ai,a); lua_number2int(bi,b); r = ai<<bi; }
+#define luai_logrshft(L, r, a,b)   { lua_Integer ai,bi; lua_number2int(ai,a); lua_number2int(bi,b); r = ai>>bi; }
 #endif
 
 

@@ -1,5 +1,5 @@
 /*
-** $Id: lstate.c,v 2.98 2012/05/30 12:33:44 roberto Exp roberto $
+** $Id: lstate.c,v 2.99 2012/10/02 17:40:53 roberto Exp $
 ** Global State
 ** See Copyright Notice in lua.h
 */
@@ -300,6 +300,11 @@ LUA_API lua_State *lua_newstate (lua_Alloc f, void *ud) {
   g->gcpause = LUAI_GCPAUSE;
   g->gcmajorinc = LUAI_GCMAJOR;
   g->gcstepmul = LUAI_GCMUL;
+
+  /* Opcounters for MusicMud */
+  L->maxopcount=0;
+  L->opcount=0;
+
   for (i=0; i < LUA_NUMTAGS; i++) g->mt[i] = NULL;
   if (luaD_rawrunprotected(L, f_luaopen, NULL) != LUA_OK) {
     /* memory allocation error: free partial state */

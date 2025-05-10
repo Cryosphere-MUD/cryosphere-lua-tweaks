@@ -1,5 +1,5 @@
 /*
-** $Id: ldebug.c,v 2.89 2012/01/20 22:05:50 roberto Exp roberto $
+** $Id: ldebug.c,v 2.90 2012/08/16 17:34:28 roberto Exp $
 ** Debug Interface
 ** See Copyright Notice in lua.h
 */
@@ -568,6 +568,16 @@ l_noret luaG_errormsg (lua_State *L) {
   }
   luaD_throw(L, LUA_ERRRUN);
 }
+
+#if defined (LUA_BITWISE_OPERATORS)
+void luaG_logicerror (lua_State *L, const TValue *p1, const TValue *p2) {
+  TValue temp;
+  if (luaV_tonumber(p1, &temp) == NULL)
+    p2 = p1;  /* first operand is wrong */
+  luaG_typeerror(L, p2, "perform bitwise operation on");
+}
+#endif
+
 
 
 l_noret luaG_runerror (lua_State *L, const char *fmt, ...) {

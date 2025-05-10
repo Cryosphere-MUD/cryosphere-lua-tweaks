@@ -1,5 +1,5 @@
 /*
-** $Id: lopcodes.h,v 1.141 2011/04/19 16:22:13 roberto Exp roberto $
+** $Id: lopcodes.h,v 1.142 2011/07/15 12:50:29 roberto Exp $
 ** Opcodes for Lua virtual machine
 ** See Copyright Notice in lua.h
 */
@@ -190,9 +190,19 @@ OP_MUL,/*	A B C	R(A) := RK(B) * RK(C)				*/
 OP_DIV,/*	A B C	R(A) := RK(B) / RK(C)				*/
 OP_MOD,/*	A B C	R(A) := RK(B) % RK(C)				*/
 OP_POW,/*	A B C	R(A) := RK(B) ^ RK(C)				*/
+#if defined(LUA_BITWISE_OPERATORS)
+OP_BOR,/*	A B C	R(A) := RK(B) | RK(C)				*/
+OP_BAND,/*	A B C	R(A) := RK(B) & RK(C)				*/
+OP_BXOR,/*	A B C	R(A) := RK(B) ^| RK(C)				*/
+OP_BLSHFT,/*	A B C	R(A) := RK(B) << RK(C)				*/
+OP_BRSHFT,/*	A B C	R(A) := RK(B) >> RK(C)				*/
+OP_BNOT,/*	A B	R(A) := ~ R(B)				*/
+OP_INTDIV,/*	A B C	R(A) := RK(B) \ RK(C)				*/
+#endif
 OP_UNM,/*	A B	R(A) := -R(B)					*/
 OP_NOT,/*	A B	R(A) := not R(B)				*/
 OP_LEN,/*	A B	R(A) := length of R(B)				*/
+
 
 OP_CONCAT,/*	A B C	R(A) := R(B).. ... ..R(C)			*/
 

@@ -1,5 +1,5 @@
 /*
-** $Id: ltm.c,v 2.13 2011/02/28 17:32:10 roberto Exp roberto $
+** $Id: ltm.c,v 2.14 2011/06/02 19:31:40 roberto Exp $
 ** Tag methods
 ** See Copyright Notice in lua.h
 */
@@ -31,11 +31,14 @@ LUAI_DDEF const char *const luaT_typenames_[LUA_TOTALTAGS] = {
 
 void luaT_init (lua_State *L) {
   static const char *const luaT_eventname[] = {  /* ORDER TM */
-    "__index", "__newindex",
+    "__index", "__newindex", "__usedindex",
     "__gc", "__mode", "__len", "__eq",
     "__add", "__sub", "__mul", "__div", "__mod",
     "__pow", "__unm", "__lt", "__le",
     "__concat", "__call"
+#if defined(LUA_BITWISE_OPERATORS)
+    ,"__or", "__and", "__xor", "__shl", "__shr", "__not", "__intdiv"
+#endif
   };
   int i;
   for (i=0; i<TM_N; i++) {
